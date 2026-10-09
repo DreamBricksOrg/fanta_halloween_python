@@ -10,7 +10,7 @@ class SerialNotifier:
         return cls()
 
     @classmethod
-    def open(cls, port: str | None, baud: int = 9600):
+    def open(cls, port: str | None, baud: int = 115200):
         if not port:
             return cls.disabled()
         try:

@@ -29,9 +29,15 @@ Playlist entries use `VIDEO_N` keys, ordered numerically (not by textual sorting
 | --- | --- | --- |
 | `VIDEO_0`, `VIDEO_1`, … | Video paths in playlist order | Required |
 | `SERIAL_PORT` | Serial port name, such as `COM4` or `/dev/ttyACM0` | Blank (disabled) |
-| `SERIAL_BAUD` | Serial baud rate | `9600` |
+| `SERIAL_BAUD` | Serial baud rate | `115200` |
 
 When a video begins playback, the player sends only its playlist index as ASCII digits followed by a newline. For the first video that is `b"0\\n"`, equivalent to Arduino `Serial.println("0");`. A port is never assumed; configure one only when serial output is wanted.
+
+### DMX lighting sketch
+
+The `arduino/fanta_halloween_dmx/fanta_halloween_dmx.ino` sketch uses the DmxSimple library, DMX output on pin 13, and DMX start channel 1. It drives ten RGB groups (30 consecutive channels) and listens for newline-delimited color IDs at 115200 baud: `0` = orange (RGB 255, 96, 0), `1` = reddish purple (RGB 190, 0, 120), and `2` = blue purple (RGB 72, 0, 255). Color changes fade over 500 ms. The sketch sends no serial output and has no input timeout, so the last selected color remains active.
+
+Before using the sketch, manually set `SERIAL_BAUD=115200` in your ignored local `.env`; `.env.example` documents the value but does not change the local file. Set `SERIAL_PORT` to the Arduino's port as well.
 
 ## Run and controls
 

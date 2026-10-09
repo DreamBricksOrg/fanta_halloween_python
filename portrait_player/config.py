@@ -14,7 +14,7 @@ class ConfigError(ValueError):
 class Config:
     videos: tuple[Path, ...]
     serial_port: str | None = None
-    serial_baud: int = 9600
+    serial_baud: int = 115200
 
 
 _VIDEO_KEY = re.compile(r"^VIDEO_(\d+)$")
@@ -70,7 +70,7 @@ def load_config(env_file: str | Path = ".env", project_root: str | Path | None =
     videos = tuple((root / value).resolve() if not Path(value).is_absolute() else Path(value).resolve() for _, value in numbered)
     port = values.get("SERIAL_PORT", "").strip() or None
     try:
-        baud = int(values.get("SERIAL_BAUD", "9600").strip())
+        baud = int(values.get("SERIAL_BAUD", "115200").strip())
         if baud <= 0:
             raise ValueError
     except ValueError as exc:

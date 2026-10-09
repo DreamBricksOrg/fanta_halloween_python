@@ -1,0 +1,105 @@
+#include <DmxSimple.h>
+
+const uint8_t DMX_PIN = 13;
+const uint16_t START_CHANNEL = 1;
+const uint8_t RGB_GROUPS = 10;
+const unsigned long FADE_DURATION_MS = 500;
+const uint32_t SERIAL_BAUD = 115200;
+
+const uint8_t COLORS[][3] = {
+  {255, 96, 0},   // 0: orange
+  {190, 0, 120},  // 1: reddish purple
+  {72, 0, 255}    // 2: blue purple
+};
+const uint8_t COLOR_COUNT = sizeof(COLORS) / sizeof(COLORS[0]);
+
+uint8_t currentRgb[3] = {0, 0, 0};
+uint8_t fadeFromRgb[3] = {0, 0, 0};
+uint8_t targetRgb[3] = {0, 0, 0};
+unsigned long fadeStartedAt = 0;
+bool fading = false;
+char inputLine[8];
+uint8_t inputLength = 0;
+bool discardLine = false;
+
+void writeRgbToAllGroups(const uint8_t rgb[3]) {
+  for (uint8_t group = 0; group < RGB_GROUPS; ++group) {
+    const uint16_t channel = START_CHANNEL + group * 3;
+    DmxSimple.write(channel, rgb[0]);
+    DmxSimple.write(channel + 1, rgb[1]);
+    DmxSimple.write(channel + 2, rgb[2]);
+  }
+}
+
+void selectColor(uint8_t colorId) {
+  if (colorId >= COLOR_COUNT) return;
+
+  // Preserve the currently displayed value if a new command arrives mid-fade.
+  for (uint8_t channel = 0; channel < 3; ++channel) {
+    fadeFromRgb[channel] = currentRgb[channel];
+    targetRgb[channel] = COLORS[colorId][channel];
+  }
+  fadeStartedAt = millis();
+  fading = true;
+}
+
+void processInputLine() {
+  if (discardLine || inputLength == 0) return;
+
+  uint8_t colorId = 0;
+  for (uint8_t index = 0; index < inputLength; ++index) {
+    const char value = inputLine[index];
+    if (value < '0' || value > '9') return;
+    colorId = colorId * 10 + (value - '0');
+    if (colorId >= COLOR_COUNT) return;
+  }
+  selectColor(colorId);
+}
+
+void readSerialLines() {
+  while (Serial.available() > 0) {
+    const char value = Serial.read();
+    if (value == '\n') {
+      processInputLine();
+      inputLength = 0;
+      discardLine = false;
+    } else if (value != '\r') {
+      if (inputLength < sizeof(inputLine) - 1 && !discardLine) {
+        inputLine[inputLength++] = value;
+      } else {
+        discardLine = true;
+      }
+    }
+  }
+}
+
+void updateFade() {
+  if (!fading) return;
+
+  const unsigned long elapsed = millis() - fadeStartedAt;
+  if (elapsed >= FADE_DURATION_MS) {
+    for (uint8_t channel = 0; channel < 3; ++channel) {
+      currentRgb[channel] = targetRgb[channel];
+    }
+    fading = false;
+  } else {
+    for (uint8_t channel = 0; channel < 3; ++channel) {
+      const int difference = (int)targetRgb[channel] - (int)fadeFromRgb[channel];
+      currentRgb[channel] = fadeFromRgb[channel] +
+          (int32_t)difference * (int32_t)elapsed / (int32_t)FADE_DURATION_MS;
+    }
+  }
+  writeRgbToAllGroups(currentRgb);
+}
+
+void setup() {
+  DmxSimple.usePin(DMX_PIN);
+  DmxSimple.maxChannel(START_CHANNEL + RGB_GROUPS * 3 - 1);
+  Serial.begin(SERIAL_BAUD);
+  writeRgbToAllGroups(currentRgb);
+}
+
+void loop() {
+  readSerialLines();
+  updateFade();
+}

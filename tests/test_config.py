@@ -32,14 +32,23 @@ def test_relative_paths_resolve_from_project_root_not_env_file(tmp_path):
     assert config.videos == (project / "media" / "clip.mp4",)
 
 
-def test_serial_is_disabled_when_port_blank_and_defaults_to_9600(tmp_path):
+def test_serial_is_disabled_when_port_blank_and_defaults_to_115200(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("VIDEO_0=clip.mp4\nSERIAL_PORT= \n", encoding="utf-8")
 
     config = load_config(env_file, project_root=tmp_path)
 
     assert config.serial_port is None
-    assert config.serial_baud == 9600
+    assert config.serial_baud == 115200
+
+
+def test_serial_baud_can_be_configured(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("VIDEO_0=clip.mp4\nSERIAL_BAUD=57600\n", encoding="utf-8")
+
+    config = load_config(env_file, project_root=tmp_path)
+
+    assert config.serial_baud == 57600
 
 
 @pytest.mark.parametrize("contents", ["", "SERIAL_PORT=COM3\n", "VIDEO_0=\n", "VIDEO_1=one.mp4\n"])
