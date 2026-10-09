@@ -1,0 +1,12 @@
+.env
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
