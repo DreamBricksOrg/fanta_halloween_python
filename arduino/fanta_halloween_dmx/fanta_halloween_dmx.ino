@@ -7,9 +7,9 @@ const unsigned long FADE_DURATION_MS = 500;
 const uint32_t SERIAL_BAUD = 115200;
 
 const uint8_t COLORS[][3] = {
-  {255, 96, 0},   // 0: orange
-  {190, 0, 120},  // 1: reddish purple
-  {72, 0, 255}    // 2: blue purple
+  {190, 0, 120},  // 0: reddish purple
+  {255, 20, 0},   // 1: orange
+  {230, 10, 255}    // 2: blue purple
 };
 const uint8_t COLOR_COUNT = sizeof(COLORS) / sizeof(COLORS[0]);
 
