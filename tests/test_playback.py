@@ -88,3 +88,17 @@ def test_single_video_restarts_when_end_event_arrives():
 
     assert backend.loaded == [video, video]
     assert notifier.indices == [0, 0]
+
+
+def test_end_events_advance_in_playlist_order_and_wrap_with_start_notifications():
+    videos = tuple(Path(f"{name}.mp4") for name in "abc")
+    backend, notifier = FakeBackend(), FakeNotifier()
+    player = PlaylistPlayer(videos, backend, notifier)
+
+    player.start()
+    backend.on_end()
+    backend.on_end()
+    backend.on_end()
+
+    assert backend.loaded == [videos[0], videos[1], videos[2], videos[0]]
+    assert notifier.indices == [0, 1, 2, 0]

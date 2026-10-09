@@ -1,5 +1,7 @@
 """VLC adapter. python-vlc is imported only when a real player is created."""
 
+from queue import Empty, SimpleQueue
+
 
 class VLCBackend:
     def __init__(self, video_widget):
@@ -12,6 +14,7 @@ class VLCBackend:
         self._player = self._instance.media_player_new()
         self._widget = video_widget
         self.on_end = lambda: None
+        self._pending_events = SimpleQueue()
         if hasattr(video_widget, "winfo_id"):
             handle = video_widget.winfo_id()
             if hasattr(self._player, "set_hwnd"):
@@ -20,7 +23,12 @@ class VLCBackend:
                 self._player.set_xwindow(handle)
             else:
                 self._player.set_nsobject(handle)
-        self._player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, lambda event: self.on_end())
+        self._player.event_manager().event_attach(
+            vlc.EventType.MediaPlayerEndReached,
+            lambda event: self._pending_events.put(None),
+        )
+        if hasattr(self._player, "video_set_key_input"):
+            self._player.video_set_key_input(False)
 
     def play(self, path, on_started):
         media = self._instance.media_new(str(path))
@@ -34,3 +42,12 @@ class VLCBackend:
 
     def stop(self):
         self._player.stop()
+
+    def process_events(self):
+        """Deliver VLC worker-thread events from the caller's (Tk) thread."""
+        while True:
+            try:
+                self._pending_events.get_nowait()
+            except Empty:
+                break
+            self.on_end()

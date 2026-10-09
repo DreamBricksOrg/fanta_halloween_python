@@ -45,7 +45,7 @@ def main():
         raise SystemExit(1)
     player = PlaylistPlayer(config.videos, backend, notifier)
 
-    footer = tk.Frame(video, bg="#111111")
+    footer = tk.Frame(root, bg="#111111")
     tk.Label(
         footer,
         text="D: hide debug  |  ← Previous  |  → Next  |  Space Pause/Resume  |  Esc Exit",
@@ -57,25 +57,41 @@ def main():
     for label, action in (("Previous", player.previous), ("Pause / Resume", player.pause_resume), ("Next", player.next)):
         tk.Button(controls, text=label, command=action).pack(side="left", expand=True, fill="x")
     controls.pack(fill="x", padx=8, pady=(0, 8))
+    debug_visible = False
 
     def toggle_debug(event=None):
-        if footer.winfo_manager():
+        nonlocal debug_visible
+        if debug_visible:
             footer.place_forget()
         else:
-            footer.place(relx=0, rely=1, relwidth=1, anchor="sw")
+            footer.place(
+                x=(root.winfo_screenwidth() - width) // 2,
+                y=(root.winfo_screenheight() + height) // 2,
+                width=width,
+                anchor="sw",
+            )
+            footer.lift()
+        debug_visible = not debug_visible
         return "break"
 
-    root.bind("<d>", toggle_debug)
-    root.bind("<D>", toggle_debug)
-    root.bind("<Left>", lambda event: player.previous())
-    root.bind("<Right>", lambda event: player.next())
-    root.bind("<space>", lambda event: player.pause_resume())
+    root.bind_all("<d>", toggle_debug)
+    root.bind_all("<D>", toggle_debug)
+    root.bind_all("<Left>", lambda event: (player.previous(), "break")[1])
+    root.bind_all("<Right>", lambda event: (player.next(), "break")[1])
+    root.bind_all("<space>", lambda event: (player.pause_resume(), "break")[1])
+    root.bind_all("<Escape>", lambda event: (shutdown(), "break")[1])
+    root.focus_force()
+
+    def poll_vlc_events():
+        backend.process_events()
+        root.after(30, poll_vlc_events)
+
+    root.after(30, poll_vlc_events)
     root.after(150, player.start)
 
     def shutdown():
         player.close()
         root.destroy()
 
-    root.bind("<Escape>", lambda event: shutdown())
     root.protocol("WM_DELETE_WINDOW", shutdown)
     root.mainloop()
