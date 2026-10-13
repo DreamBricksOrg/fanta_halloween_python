@@ -21,10 +21,10 @@ class FakeBackend:
 
 class FakeNotifier:
     def __init__(self):
-        self.indices = []
+        self.events = []
 
-    def playback_started(self, index):
-        self.indices.append(index)
+    def playback_started(self, index, rgb):
+        self.events.append((index, rgb))
 
     def close(self):
         pass
@@ -36,11 +36,11 @@ def test_each_actual_playback_start_notifies_once_and_controls_wrap_playlist():
     player = PlaylistPlayer(videos, backend, notifier)
 
     player.start()
-    assert notifier.indices == [0]
+    assert notifier.events == [(0, (255, 96, 0))]
     player.next()
-    assert notifier.indices == [0, 1]
+    assert notifier.events == [(0, (255, 96, 0)), (1, (190, 0, 120))]
     player.previous()
-    assert notifier.indices == [0, 1, 0]
+    assert notifier.events == [(0, (255, 96, 0)), (1, (190, 0, 120)), (0, (255, 96, 0))]
     player.pause_resume()
     assert backend.paused
 
@@ -58,7 +58,7 @@ def test_duplicate_start_event_for_same_playback_does_not_notify_twice():
     callbacks[0]()
     callbacks[0]()
 
-    assert notifier.indices == [0]
+    assert notifier.events == [(0, (255, 96, 0))]
 
 
 def test_late_start_event_from_replaced_video_is_ignored():
@@ -75,7 +75,7 @@ def test_late_start_event_from_replaced_video_is_ignored():
     callbacks[0]()
     callbacks[1]()
 
-    assert notifier.indices == [1]
+    assert notifier.events == [(1, (190, 0, 120))]
 
 
 def test_single_video_restarts_when_end_event_arrives():
@@ -87,7 +87,7 @@ def test_single_video_restarts_when_end_event_arrives():
     backend.on_end()
 
     assert backend.loaded == [video, video]
-    assert notifier.indices == [0, 0]
+    assert notifier.events == [(0, (255, 96, 0)), (0, (255, 96, 0))]
 
 
 def test_end_events_advance_in_playlist_order_and_wrap_with_start_notifications():
@@ -101,4 +101,4 @@ def test_end_events_advance_in_playlist_order_and_wrap_with_start_notifications(
     backend.on_end()
 
     assert backend.loaded == [videos[0], videos[1], videos[2], videos[0]]
-    assert notifier.indices == [0, 1, 2, 0]
+    assert notifier.events == [(0, (255, 96, 0)), (1, (190, 0, 120)), (2, (72, 0, 255)), (0, (255, 96, 0))]

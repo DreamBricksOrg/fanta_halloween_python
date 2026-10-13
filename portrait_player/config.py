@@ -13,11 +13,23 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class Config:
     videos: tuple[Path, ...]
+    video_rgbs: tuple[tuple[int, int, int], ...]
     serial_port: str | None = None
     serial_baud: int = 115200
 
 
 _VIDEO_KEY = re.compile(r"^VIDEO_(\d+)$")
+_RGB_DEFAULTS = ((255, 96, 0), (190, 0, 120), (72, 0, 255))
+
+
+def _parse_rgb(key: str, value: str) -> tuple[int, int, int]:
+    try:
+        channels = tuple(int(channel.strip()) for channel in value.split(","))
+    except ValueError as exc:
+        raise ConfigError(f"{key} must contain three integer channels from 0 to 255") from exc
+    if len(channels) != 3 or any(channel < 0 or channel > 255 for channel in channels):
+        raise ConfigError(f"{key} must contain three integer channels from 0 to 255")
+    return channels
 
 
 def _read_env(path: Path) -> dict[str, str]:
@@ -68,6 +80,11 @@ def load_config(env_file: str | Path = ".env", project_root: str | Path | None =
         raise ConfigError("Video entries must have unique numeric indices starting at VIDEO_0")
 
     videos = tuple((root / value).resolve() if not Path(value).is_absolute() else Path(value).resolve() for _, value in numbered)
+    video_rgbs = []
+    for index, _ in numbered:
+        key = f"VIDEO_{index}_RGB"
+        default = _RGB_DEFAULTS[index] if index < len(_RGB_DEFAULTS) else _RGB_DEFAULTS[-1]
+        video_rgbs.append(_parse_rgb(key, values.get(key, ",".join(map(str, default)))))
     port = values.get("SERIAL_PORT", "").strip() or None
     try:
         baud = int(values.get("SERIAL_BAUD", "115200").strip())
@@ -75,4 +92,4 @@ def load_config(env_file: str | Path = ".env", project_root: str | Path | None =
             raise ValueError
     except ValueError as exc:
         raise ConfigError("SERIAL_BAUD must be a positive integer") from exc
-    return Config(videos=videos, serial_port=port, serial_baud=baud)
+    return Config(videos=videos, video_rgbs=tuple(video_rgbs), serial_port=port, serial_baud=baud)

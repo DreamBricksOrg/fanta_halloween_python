@@ -1,4 +1,5 @@
 #include <DmxSimple.h>
+#include <string.h>
 
 const uint8_t DMX_PIN = 13;
 const uint16_t START_CHANNEL = 1;
@@ -6,19 +7,12 @@ const uint8_t RGB_GROUPS = 10;
 const unsigned long FADE_DURATION_MS = 500;
 const uint32_t SERIAL_BAUD = 115200;
 
-const uint8_t COLORS[][3] = {
-  {190, 0, 120},  // 0: reddish purple
-  {255, 20, 0},   // 1: orange
-  {230, 10, 255}    // 2: blue purple
-};
-const uint8_t COLOR_COUNT = sizeof(COLORS) / sizeof(COLORS[0]);
-
 uint8_t currentRgb[3] = {0, 0, 0};
 uint8_t fadeFromRgb[3] = {0, 0, 0};
 uint8_t targetRgb[3] = {0, 0, 0};
 unsigned long fadeStartedAt = 0;
 bool fading = false;
-char inputLine[8];
+char inputLine[32];
 uint8_t inputLength = 0;
 bool discardLine = false;
 
@@ -31,13 +25,11 @@ void writeRgbToAllGroups(const uint8_t rgb[3]) {
   }
 }
 
-void selectColor(uint8_t colorId) {
-  if (colorId >= COLOR_COUNT) return;
-
+void selectColor(const uint8_t rgb[3]) {
   // Preserve the currently displayed value if a new command arrives mid-fade.
   for (uint8_t channel = 0; channel < 3; ++channel) {
     fadeFromRgb[channel] = currentRgb[channel];
-    targetRgb[channel] = COLORS[colorId][channel];
+    targetRgb[channel] = rgb[channel];
   }
   fadeStartedAt = millis();
   fading = true;
@@ -45,15 +37,24 @@ void selectColor(uint8_t colorId) {
 
 void processInputLine() {
   if (discardLine || inputLength == 0) return;
-
-  uint8_t colorId = 0;
-  for (uint8_t index = 0; index < inputLength; ++index) {
-    const char value = inputLine[index];
-    if (value < '0' || value > '9') return;
-    colorId = colorId * 10 + (value - '0');
-    if (colorId >= COLOR_COUNT) return;
+  inputLine[inputLength] = '\0';
+  if (inputLength < 10 || strncmp(inputLine, "RGB(", 4) != 0 || inputLine[inputLength - 1] != ')') return;
+  uint8_t rgb[3];
+  uint8_t position = 4;
+  for (uint8_t channel = 0; channel < 3; ++channel) {
+    if (position >= inputLength - 1 || inputLine[position] < '0' || inputLine[position] > '9') return;
+    uint16_t value = 0;
+    while (position < inputLength - 1 && inputLine[position] >= '0' && inputLine[position] <= '9') {
+      value = value * 10 + (inputLine[position++] - '0');
+      if (value > 255) return;
+    }
+    rgb[channel] = (uint8_t)value;
+    if (channel < 2) {
+      if (position >= inputLength - 1 || inputLine[position++] != ',') return;
+    }
   }
-  selectColor(colorId);
+  if (position != inputLength - 1) return;
+  selectColor(rgb);
 }
 
 void readSerialLines() {
@@ -63,7 +64,9 @@ void readSerialLines() {
       processInputLine();
       inputLength = 0;
       discardLine = false;
-    } else if (value != '\r') {
+    } else if (value == '\r') {
+      continue;
+    } else {
       if (inputLength < sizeof(inputLine) - 1 && !discardLine) {
         inputLine[inputLength++] = value;
       } else {

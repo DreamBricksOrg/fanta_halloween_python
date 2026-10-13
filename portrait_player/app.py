@@ -43,7 +43,7 @@ def main():
         root.destroy()
         notifier.close()
         raise SystemExit(1)
-    player = PlaylistPlayer(config.videos, backend, notifier)
+    player = PlaylistPlayer(config.videos, backend, notifier, config.video_rgbs)
 
     footer = tk.Frame(root, bg="#111111")
     tk.Label(

@@ -1,6 +1,6 @@
 # Portrait Playlist Player
 
-A small Python desktop player that displays a VLC playlist in a 9:16 portrait window. It can optionally send each playing video's zero-based playlist index to an Arduino over serial.
+A small Python desktop player that displays a VLC playlist in a 9:16 portrait window. It can optionally send each playing video's configured RGB color to an Arduino over serial.
 
 ## Prerequisites
 
@@ -28,16 +28,19 @@ Playlist entries use `VIDEO_N` keys, ordered numerically (not by textual sorting
 | Variable | Meaning | Default |
 | --- | --- | --- |
 | `VIDEO_0`, `VIDEO_1`, … | Video paths in playlist order | Required |
+| `VIDEO_0_RGB` | RGB channels for the first video, comma-separated | `255,96,0` |
+| `VIDEO_1_RGB` | RGB channels for the second video, comma-separated | `190,0,120` |
+| `VIDEO_2_RGB` | RGB channels for the third video, comma-separated | `72,0,255` |
 | `SERIAL_PORT` | Serial port name, such as `COM4` or `/dev/ttyACM0` | Blank (disabled) |
 | `SERIAL_BAUD` | Serial baud rate | `115200` |
 
-When a video begins playback, the player sends only its playlist index as ASCII digits followed by a newline. For the first video that is `b"0\\n"`, equivalent to Arduino `Serial.println("0");`. A port is never assumed; configure one only when serial output is wanted.
+When a video begins playback, the player sends its actual RGB values as ASCII `RGB(r,g,b)` followed by newline. For the first video's default color this is `b"RGB(255,96,0)\\n"`. Each channel must be an integer from 0 to 255. Missing color keys use the defaults above; change these keys in `.env` without recompiling firmware. A port is never assumed; configure one only when serial output is wanted.
 
 ### DMX lighting sketch
 
-The `arduino/fanta_halloween_dmx/fanta_halloween_dmx.ino` sketch uses the DmxSimple library, DMX output on pin 13, and DMX start channel 1. It drives ten RGB groups (30 consecutive channels) and listens for newline-delimited color IDs at 115200 baud: `0` = orange (RGB 255, 96, 0), `1` = reddish purple (RGB 190, 0, 120), and `2` = blue purple (RGB 72, 0, 255). Color changes fade over 500 ms. The sketch sends no serial output and has no input timeout, so the last selected color remains active.
+The `arduino/fanta_halloween_dmx/fanta_halloween_dmx.ino` sketch uses the DmxSimple library, DMX output on pin 13, and DMX start channel 1. It drives ten RGB groups (30 consecutive channels) and accepts only strict newline-terminated `RGB(r,g,b)` commands at 115200 baud, with each channel from 0 to 255 (for example, `RGB(255,96,0)\\n`). LF and CRLF line endings are accepted. Color changes fade over 500 ms. The sketch sends no serial output and has no input timeout, so the last selected color remains active.
 
-Before using the sketch, manually set `SERIAL_BAUD=115200` in your ignored local `.env`; `.env.example` documents the value but does not change the local file. Set `SERIAL_PORT` to the Arduino's port as well.
+Set `SERIAL_PORT` to the Arduino's port in `.env` to enable serial output. The baud rate must match the sketch (`SERIAL_BAUD=115200`).
 
 ## Run and controls
 
@@ -55,4 +58,4 @@ Automated tests use fakes and do not require VLC or an Arduino:
 python -m pytest -q
 ```
 
-For an optional playback smoke test, install VLC's runtime, put a short portrait clip at a configured path, leave `SERIAL_PORT` blank, and run the command above. To check the Arduino signal, set `SERIAL_PORT` to the correct device and baud; use a serial monitor that expects one newline-terminated numeric index per playback start.
+For an optional playback smoke test, install VLC's runtime, put a short portrait clip at a configured path, leave `SERIAL_PORT` blank, and run the command above. To check the Arduino signal, set `SERIAL_PORT` to the correct device and baud; observe one newline-terminated `RGB(r,g,b)` command per playback start.

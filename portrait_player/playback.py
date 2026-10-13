@@ -2,12 +2,13 @@
 
 
 class PlaylistPlayer:
-    def __init__(self, videos, backend, notifier):
+    def __init__(self, videos, backend, notifier, video_rgbs=None):
         if not videos:
             raise ValueError("playlist must contain at least one video")
         self.videos = tuple(videos)
         self.backend = backend
         self.notifier = notifier
+        self.video_rgbs = tuple(video_rgbs or ((255, 96, 0), (190, 0, 120), (72, 0, 255)))
         self.index = 0
         self._generation = 0
         self._started_generation = None
@@ -24,7 +25,7 @@ class PlaylistPlayer:
                 return
             if self._started_generation != generation:
                 self._started_generation = generation
-                self.notifier.playback_started(index)
+                self.notifier.playback_started(index, self.video_rgbs[index % len(self.video_rgbs)])
 
         self.backend.play(self.videos[self.index], started)
 
