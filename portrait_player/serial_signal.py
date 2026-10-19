@@ -1,5 +1,7 @@
 """Optional Arduino serial playback notifications."""
 
+from __future__ import annotations
+
 
 class SerialNotifier:
     def __init__(self, connection=None):
