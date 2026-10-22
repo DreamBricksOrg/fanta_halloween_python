@@ -9,3 +9,6 @@ __pycache__/
 .venv/
 venv/
 env/
+
+playlist_state.json
+videos/*.part

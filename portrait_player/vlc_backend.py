@@ -40,6 +40,9 @@ class VLCBackend:
     def pause(self):
         self._player.pause()
 
+    def set_pause(self, paused):
+        self._player.set_pause(1 if paused else 0)
+
     def stop(self):
         self._player.stop()
 

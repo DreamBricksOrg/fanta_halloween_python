@@ -1,11 +1,15 @@
 """Tk interface for a portrait VLC playlist."""
 
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 
 from .config import ConfigError, load_config
+from .control_server import ControlServer, MainThread
 from .playback import PlaylistPlayer
+from .playlist_state import STATE_FILE, load_state, save_state
 from .serial_signal import SerialNotifier
+from .telemetry import Telemetry
 from .vlc_backend import VLCBackend
 
 
@@ -19,7 +23,8 @@ def portrait_viewport_size(screen_width, screen_height):
 def main():
     try:
         config = load_config()
-        notifier = SerialNotifier.open(config.serial_port, config.serial_baud)
+        telemetry = Telemetry()
+        notifier = SerialNotifier.open(config.serial_port, config.serial_baud, telemetry)
     except (ConfigError, OSError, RuntimeError) as exc:
         root = tk.Tk()
         root.withdraw()
@@ -43,7 +48,28 @@ def main():
         root.destroy()
         notifier.close()
         raise SystemExit(1)
-    player = PlaylistPlayer(config.videos, backend, notifier, config.video_rgbs)
+    state_path = Path.cwd() / STATE_FILE
+    saved = load_state(state_path)
+    videos, rgbs = saved if saved else (config.videos, config.video_rgbs)
+    player = PlaylistPlayer(
+        videos,
+        backend,
+        notifier,
+        rgbs,
+        on_event=telemetry.event,
+        on_change=lambda: save_state(state_path, player),
+    )
+    main_thread = MainThread()
+    server = None
+    if config.control_port:
+        try:
+            server = ControlServer(
+                config.control_host, config.control_port, player, notifier, telemetry, main_thread, Path.cwd() / "videos"
+            )
+            server.start()
+            telemetry.event("server", f"painel em http://{config.control_host}:{server.port}")
+        except OSError as exc:
+            telemetry.event("server", f"painel não iniciou: {exc}", ok=False)
 
     footer = tk.Frame(root, bg="#111111")
     tk.Label(
@@ -84,12 +110,23 @@ def main():
 
     def poll_vlc_events():
         backend.process_events()
+        main_thread.drain()
         root.after(30, poll_vlc_events)
+
+    def poll_serial():
+        if notifier.poll() and notifier.last_rgb is not None:
+            # The Arduino resets when the port opens; give it time to boot before resending the color.
+            root.after(2500, lambda: notifier.send_rgb(notifier.last_rgb, "reconexão"))
+        root.after(500, poll_serial)
+
+    root.after(500, poll_serial)
 
     root.after(30, poll_vlc_events)
     root.after(150, player.start)
 
     def shutdown():
+        if server is not None:
+            server.stop()
         player.close()
         root.destroy()
 

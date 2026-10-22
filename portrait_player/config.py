@@ -18,6 +18,8 @@ class Config:
     video_rgbs: tuple[tuple[int, int, int], ...]
     serial_port: str | None = None
     serial_baud: int = 115200
+    control_host: str = "127.0.0.1"
+    control_port: int = 8080
 
 
 _VIDEO_KEY = re.compile(r"^VIDEO_(\d+)$")
@@ -65,7 +67,7 @@ def load_config(env_file: str | Path = ".env", project_root: str | Path | None =
     root = root.resolve()
     values = _read_env(env_path)
     # Process environment values override values from the file, as dotenv users expect.
-    values.update({key: value for key, value in os.environ.items() if key in values or key.startswith("VIDEO_") or key in {"SERIAL_PORT", "SERIAL_BAUD"}})
+    values.update({key: value for key, value in os.environ.items() if key in values or key.startswith("VIDEO_") or key in {"SERIAL_PORT", "SERIAL_BAUD", "CONTROL_HOST", "CONTROL_PORT"}})
 
     numbered: list[tuple[int, str]] = []
     for key, value in values.items():
@@ -94,4 +96,18 @@ def load_config(env_file: str | Path = ".env", project_root: str | Path | None =
             raise ValueError
     except ValueError as exc:
         raise ConfigError("SERIAL_BAUD must be a positive integer") from exc
-    return Config(videos=videos, video_rgbs=tuple(video_rgbs), serial_port=port, serial_baud=baud)
+    host = values.get("CONTROL_HOST", "").strip() or "127.0.0.1"
+    try:
+        control_port = int(values.get("CONTROL_PORT", "8080").strip() or "8080")
+        if not 0 <= control_port <= 65535:
+            raise ValueError
+    except ValueError as exc:
+        raise ConfigError("CONTROL_PORT must be an integer from 0 to 65535 (0 disables the control panel)") from exc
+    return Config(
+        videos=videos,
+        video_rgbs=tuple(video_rgbs),
+        serial_port=port,
+        serial_baud=baud,
+        control_host=host,
+        control_port=control_port,
+    )

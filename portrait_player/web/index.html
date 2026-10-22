@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fanta Halloween · Controle</title>
+<style>
+  :root {
+    --bg: #14101a; --panel: #1e1827; --panel2: #271f33; --line: #3a2f4a;
+    --text: #f1eaf7; --muted: #9a8fab; --accent: #ff7a1a; --ok: #3ddc84; --bad: #ff5470; --warn: #ffc247;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  header h1 span { color: var(--accent); }
+  main { display: grid; gap: 16px; padding: 16px 20px 40px; max-width: 1200px; margin: 0 auto; grid-template-columns: 1fr 1fr; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1a0d00; font-weight: 600; }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  button:disabled { opacity: .4; cursor: default; }
+  input[type=text] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel2); border-radius: 8px; padding: 10px 12px; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .stat .v { font-size: 18px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+  .stat .s { font-size: 12px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); } .dot.warn { background: var(--warn); }
+
+  #list { display: grid; gap: 8px; }
+  .item { display: flex; gap: 10px; align-items: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .item.current { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .item.dragover { border-color: var(--ok); }
+  .item .n { width: 24px; text-align: center; color: var(--muted); font-weight: 600; }
+  .item .grip { cursor: grab; color: var(--muted); user-select: none; }
+  .item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .name.missing { color: var(--bad); }
+  input[type=color] { width: 38px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--accent); color: #1a0d00; font-weight: 700; }
+
+  #drop { border: 2px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; color: var(--muted); margin-bottom: 10px; }
+  #drop.over { border-color: var(--accent); color: var(--text); }
+  progress { width: 100%; height: 8px; margin-top: 8px; }
+
+  .led-sliders { display: grid; grid-template-columns: 20px 1fr 44px; gap: 6px 10px; align-items: center; margin: 12px 0; }
+  .led-sliders input[type=range] { width: 100%; }
+  #ledPreview { height: 56px; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 8px; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .presets button { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
+  body.led header { box-shadow: inset 0 -3px 0 var(--warn); }
+
+  #log { max-height: 280px; overflow-y: auto; }
+  .ev { display: flex; gap: 10px; padding: 2px 0; border-bottom: 1px solid #2a2236; }
+  .ev .t { color: var(--muted); flex: none; }
+  .ev .kind { flex: none; width: 74px; color: var(--accent); }
+  .ev.err .txt { color: var(--bad); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--bad); color: #fff; padding: 8px 16px; border-radius: 8px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎃 Fanta <span>Halloween</span> · Controle</h1>
+  <span id="conn" class="muted"><span class="dot"></span>conectando…</span>
+</header>
+<main>
+  <section class="wide">
+    <h2>Telemetria</h2>
+    <div class="stats">
+      <div class="stat"><div class="k">Aplicação rodando há</div><div class="v mono" id="uptime">–</div><div class="s" id="since"></div></div>
+      <div class="stat"><div class="k">Porta serial</div><div class="v" id="serialState">–</div><div class="s" id="serialSub"></div></div>
+      <div class="stat"><div class="k">Retorno do Arduino</div><div class="v" id="ackState">–</div><div class="s" id="ackSub"></div></div>
+      <div class="stat"><div class="k">Última mensagem enviada</div><div class="v mono" id="lastMsg">–</div><div class="s" id="lastMsgSub"></div></div>
+      <div class="stat"><div class="k">Tocando agora</div><div class="v" id="nowPlaying">–</div><div class="s" id="playState"></div></div>
+      <div class="stat"><div class="k">Contadores</div><div class="v" id="counters">–</div><div class="s">vídeos iniciados · enviadas · erros</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Playlist</h2>
+    <div class="row" style="margin-bottom:10px">
+      <button id="prev">⏮ Anterior</button>
+      <button id="pause">⏯ Pausar / Retomar</button>
+      <button id="next">Próximo ⏭</button>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <div style="display:grid; gap:16px; align-content:start; min-width:0">
+    <section>
+      <h2>Adicionar vídeo</h2>
+      <div id="drop">Arraste um vídeo aqui ou <button id="pick">escolher arquivo</button><input id="file" type="file" accept="video/*,.mkv" hidden multiple></div>
+      <progress id="prog" max="1" value="0" hidden></progress>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="path" class="grow" placeholder="ou caminho no PC: C:\videos\clipe.mp4">
+        <button id="addPath">Adicionar</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Modo LED <span id="ledBadge" class="badge" hidden>VÍDEO PAUSADO</span></h2>
+      <div class="muted">Pausa o vídeo e envia a cor direto para os LEDs.</div>
+      <div id="ledPreview"></div>
+      <div class="row">
+        <button id="ledToggle" class="primary">Ativar modo LED</button>
+        <input type="color" id="ledColor" value="#ff6000">
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="led-sliders">
+        <b style="color:#ff5470">R</b><input type="range" id="r" min="0" max="255" value="255"><span class="mono" id="rv">255</span>
+        <b style="color:#3ddc84">G</b><input type="range" id="g" min="0" max="255" value="96"><span class="mono" id="gv">96</span>
+        <b style="color:#5a9bff">B</b><input type="range" id="b" min="0" max="255" value="0"><span class="mono" id="bv">0</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="wide">
+    <h2>Log de eventos</h2>
+    <div id="log" class="mono"></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const hex = rgb => "#" + rgb.map(c => c.toString(16).padStart(2, "0")).join("");
+const unhex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+let state = null, fetchedAt = 0, lastListSig = "", lastLed = false;
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", 4000);
+}
+
+async function api(method, path, body) {
+  try {
+    const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { toast(data.error || res.statusText); return null; }
+    apply(data);
+    return data;
+  } catch (e) { toast("Sem conexão com o servidor"); return null; }
+}
+
+async function poll() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    apply(await res.json());
+    setConn(true);
+  } catch (e) { setConn(false); }
+}
+function setConn(ok) {
+  $("conn").innerHTML = `<span class="dot ${ok ? "ok" : "bad"}"></span>${ok ? "ao vivo" : "sem conexão"}`;
+}
+
+function ago(ts, now) {
+  if (!ts) return "nunca";
+  const s = Math.max(0, Math.round(now - ts));
+  return s < 60 ? `há ${s}s` : s < 3600 ? `há ${Math.floor(s / 60)}min` : `há ${Math.floor(s / 3600)}h`;
+}
+function fmtDur(s) {
+  s = Math.floor(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  const p = n => String(n).padStart(2, "0");
+  return (d ? d + "d " : "") + `${p(h)}:${p(m)}:${p(x)}`;
+}
+
+function apply(s) {
+  state = s; fetchedAt = Date.now();
+  renderTelemetry(); renderList(); renderLed(); renderLog();
+}
+
+function renderTelemetry() {
+  const s = state, t = s.telemetry, sr = s.serial, now = t.now;
+  $("since").textContent = "desde " + new Date(t.started_at * 1000).toLocaleString();
+  const cur = s.playlist[s.current];
+  $("nowPlaying").textContent = cur ? `#${s.current} ${cur.name}` : "–";
+  $("playState").textContent = s.led_mode ? "pausado (modo LED)" : s.paused ? "pausado" : "reproduzindo";
+
+  let dot, label, sub = "";
+  if (!sr.configured) { dot = "warn"; label = "Desativada"; sub = "SERIAL_PORT vazio no .env"; }
+  else if (sr.connected) { dot = "ok"; label = "Aberta"; sub = `${sr.port} @ ${sr.baud}`; }
+  else { dot = "bad"; label = "Desconectada"; sub = `${sr.port} – tentando reconectar` + (sr.last_error ? ` (${sr.last_error})` : ""); }
+  $("serialState").innerHTML = `<span class="dot ${dot}"></span>${label}`;
+  $("serialSub").textContent = sub;
+
+  $("lastMsg").textContent = sr.last_message || "–";
+  $("lastMsgSub").textContent = sr.last_write_at ? ago(sr.last_write_at, now) : "nenhuma enviada";
+
+  let ad = "warn", al = "Sem retorno", as = "firmware antigo (sem ACK) ou nada enviado ainda";
+  if (sr.last_ack_at) {
+    const confirmed = sr.last_message && sr.last_ack === "OK " + sr.last_message && sr.last_ack_at >= sr.last_write_at;
+    const bad = sr.last_ack.startsWith("ERR");
+    ad = bad ? "bad" : confirmed ? "ok" : "warn";
+    al = bad ? "Arduino rejeitou" : confirmed ? "Confirmou o último envio" : "Respondeu";
+    as = `“${sr.last_ack}” ${ago(sr.last_ack_at, now)}`;
+  }
+  if (!sr.configured) { ad = "warn"; al = "–"; as = ""; }
+  $("ackState").innerHTML = `<span class="dot ${ad}"></span>${al}`;
+  $("ackSub").textContent = as;
+
+  const c = t.counters;
+  $("counters").textContent = `${c.video || 0} · ${c.serial_tx || 0} · ${(c.serial_tx_error || 0) + (c.arduino_rx_error || 0) + (c.serial_error || 0)}`;
+}
+function tickUptime() {
+  if (state) $("uptime").textContent = fmtDur(state.telemetry.uptime_s + (Date.now() - fetchedAt) / 1000);
+}
+
+function renderList() {
+  const s = state;
+  const sig = JSON.stringify([s.playlist, s.current]);
+  if (sig === lastListSig) return;
+  lastListSig = sig;
+  const list = $("list"); list.innerHTML = "";
+  s.playlist.forEach((v, i) => {
+    const el = document.createElement("div");
+    el.className = "item" + (i === s.current ? " current" : "");
+    el.draggable = true;
+    el.innerHTML = `<span class="grip" title="arrastar">⋮⋮</span><span class="n">${i}</span>
+      <span class="name grow ${v.exists ? "" : "missing"}" title="${esc(v.path)}${v.exists ? "" : " (arquivo não encontrado)"}">${esc(v.name)}</span>
+      ${i === s.current ? '<span class="badge">NO AR</span>' : ""}
+      <input type="color" value="${hex(v.rgb)}" title="cor dos LEDs deste vídeo">
+      <button data-a="up" title="subir" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button data-a="down" title="descer" ${i === s.playlist.length - 1 ? "disabled" : ""}>↓</button>
+      <button data-a="play" title="tocar agora">▶</button>
+      <button data-a="del" class="danger" title="remover" ${s.playlist.length === 1 ? "disabled" : ""}>✕</button>`;
+    el.querySelector("input").onchange = e => api("POST", `/api/playlist/${i}/rgb`, { rgb: unhex(e.target.value) });
+    el.querySelector('[data-a="up"]').onclick = () => api("POST", "/api/playlist/move", { from: i, to: i - 1 });
+    el.querySelector('[data-a="down"]').onclick = () => api("POST", "/api/playlist/move", { from: i, to: i + 1 });
+    el.querySelector('[data-a="play"]').onclick = () => api("POST", "/api/play", { index: i });
+    el.querySelector('[data-a="del"]').onclick = () => { if (confirm(`Remover "${v.name}" da playlist? (o arquivo não é apagado)`)) api("DELETE", `/api/playlist/${i}`); };
+    el.ondragstart = e => { e.dataTransfer.setData("text/plain", String(i)); e.dataTransfer.effectAllowed = "move"; };
+    el.ondragover = e => { if (!e.dataTransfer.types.includes("Files")) { e.preventDefault(); el.classList.add("dragover"); } };
+    el.ondragleave = () => el.classList.remove("dragover");
+    el.ondrop = e => {
+      el.classList.remove("dragover");
+      const from = parseInt(e.dataTransfer.getData("text/plain"));
+      if (!isNaN(from) && from !== i) { e.preventDefault(); api("POST", "/api/playlist/move", { from, to: i }); }
+    };
+    list.appendChild(el);
+  });
+}
+function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function renderLed() {
+  const on = state.led_mode;
+  document.body.classList.toggle("led", on);
+  $("ledBadge").hidden = !on;
+  $("ledToggle").textContent = on ? "Sair do modo LED (retomar vídeo)" : "Ativar modo LED";
+  if (on && !lastLed) setSliders(state.led_rgb, false);
+  if (!on && !lastLed && !ledTouched) setSliders(state.playlist[state.current].rgb, false);
+  lastLed = on;
+}
+
+let ledTouched = false, sendTimer = null;
+function setSliders(rgb, send) {
+  ["r", "g", "b"].forEach((k, i) => { $(k).value = rgb[i]; $(k + "v").textContent = rgb[i]; });
+  $("ledColor").value = hex(rgb);
+  $("ledPreview").style.background = `rgb(${rgb.join(",")})`;
+  if (send) { ledTouched = true; scheduleSend(rgb); }
+}
+function scheduleSend(rgb) {
+  // Throttle so dragging a slider does not flood the serial line.
+  if (sendTimer) { sendTimer.rgb = rgb; return; }
+  api("POST", "/api/led/rgb", { rgb });
+  sendTimer = { rgb: null };
+  setTimeout(() => {
+    const pending = sendTimer.rgb; sendTimer = null;
+    if (pending) scheduleSend(pending);
+  }, 120);
+}
+["r", "g", "b"].forEach(k => $(k).oninput = () => setSliders(["r", "g", "b"].map(x => +$(x).value), true));
+$("ledColor").oninput = e => setSliders(unhex(e.target.value), true);
+$("ledToggle").onclick = () => { ledTouched = false; api("POST", "/api/led", { enabled: !state.led_mode }); };
+[["#ff0000"], ["#00ff00"], ["#0000ff"], ["#ffffff"], ["#ff6000"], ["#be0078"], ["#4800ff"], ["#000000"]].forEach(([c]) => {
+  const b = document.createElement("button");
+  b.style.background = c; b.title = c;
+  b.onclick = () => setSliders(unhex(c), true);
+  $("presets").appendChild(b);
+});
+
+function renderLog() {
+  const now = state.telemetry.now, log = $("log");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  log.innerHTML = state.telemetry.events.map(e =>
+    `<div class="ev ${e.ok ? "" : "err"}"><span class="t">${new Date(e.t * 1000).toLocaleTimeString()}</span><span class="kind">${esc(e.kind)}</span><span class="txt">${esc(e.text)}</span></div>`
+  ).join("");
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+
+$("prev").onclick = () => api("POST", "/api/previous");
+$("next").onclick = () => api("POST", "/api/next");
+$("pause").onclick = () => api("POST", "/api/pause");
+$("addPath").onclick = async () => { if (await api("POST", "/api/playlist/add", { path: $("path").value })) $("path").value = ""; };
+$("path").onkeydown = e => { if (e.key === "Enter") $("addPath").click(); };
+
+function upload(files) {
+  const queue = [...files];
+  const next = () => {
+    const f = queue.shift();
+    if (!f) { $("prog").hidden = true; return; }
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/playlist/upload?name=" + encodeURIComponent(f.name));
+    $("prog").hidden = false; $("prog").value = 0;
+    xhr.upload.onprogress = e => { if (e.lengthComputable) $("prog").value = e.loaded / e.total; };
+    xhr.onload = () => {
+      let data = {}; try { data = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status === 200) apply(data); else toast(data.error || "falha no upload");
+      next();
+    };
+    xhr.onerror = () => { toast("falha no upload"); next(); };
+    xhr.send(f);
+  };
+  next();
+}
+$("pick").onclick = () => $("file").click();
+$("file").onchange = e => { upload(e.target.files); e.target.value = ""; };
+const drop = $("drop");
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); upload(e.dataTransfer.files); };
+
+poll(); setInterval(poll, 1000); setInterval(tickUptime, 500);
+</script>
+</body>
+</html>

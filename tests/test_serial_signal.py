@@ -49,3 +49,31 @@ def test_disabled_notifier_does_not_require_hardware():
 
     notifier.playback_started(3, (1, 2, 3))
     notifier.close()
+
+
+def test_poll_records_arduino_acks_and_write_failure_marks_port_disconnected():
+    from portrait_player.telemetry import Telemetry
+
+    class Port(FakeSerial):
+        in_waiting = 0
+        is_open = True
+        fail = False
+
+        def write(self, payload):
+            if self.fail:
+                raise OSError("unplugged")
+            super().write(payload)
+
+        def read(self, n):
+            return b"OK RGB(1,2,3)\r\n"
+
+    telemetry = Telemetry()
+    port = Port()
+    notifier = SerialNotifier(port, telemetry, port="COM9")
+    assert notifier.send_rgb((1, 2, 3))
+    port.in_waiting = 15
+    notifier.poll()
+    assert notifier.last_ack == "OK RGB(1,2,3)"
+    port.fail = True
+    assert not notifier.send_rgb((4, 5, 6))
+    assert not notifier.status()["connected"] and "unplugged" in notifier.status()["last_error"]

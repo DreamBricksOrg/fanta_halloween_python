@@ -35,26 +35,38 @@ void selectColor(const uint8_t rgb[3]) {
   fading = true;
 }
 
-void processInputLine() {
-  if (discardLine || inputLength == 0) return;
+bool parseInputLine() {
+  if (inputLength == 0) return false;
   inputLine[inputLength] = '\0';
-  if (inputLength < 10 || strncmp(inputLine, "RGB(", 4) != 0 || inputLine[inputLength - 1] != ')') return;
+  if (inputLength < 10 || strncmp(inputLine, "RGB(", 4) != 0 || inputLine[inputLength - 1] != ')') return false;
   uint8_t rgb[3];
   uint8_t position = 4;
   for (uint8_t channel = 0; channel < 3; ++channel) {
-    if (position >= inputLength - 1 || inputLine[position] < '0' || inputLine[position] > '9') return;
+    if (position >= inputLength - 1 || inputLine[position] < '0' || inputLine[position] > '9') return false;
     uint16_t value = 0;
     while (position < inputLength - 1 && inputLine[position] >= '0' && inputLine[position] <= '9') {
       value = value * 10 + (inputLine[position++] - '0');
-      if (value > 255) return;
+      if (value > 255) return false;
     }
     rgb[channel] = (uint8_t)value;
     if (channel < 2) {
-      if (position >= inputLength - 1 || inputLine[position++] != ',') return;
+      if (position >= inputLength - 1 || inputLine[position++] != ',') return false;
     }
   }
-  if (position != inputLength - 1) return;
+  if (position != inputLength - 1) return false;
   selectColor(rgb);
+  return true;
+}
+
+void processInputLine() {
+  if (inputLength == 0 && !discardLine) return;
+  // Acknowledge every line so the host can tell the command arrived intact.
+  if (!discardLine && parseInputLine()) {
+    Serial.print("OK ");
+    Serial.println(inputLine);
+  } else {
+    Serial.println("ERR");
+  }
 }
 
 void readSerialLines() {
@@ -100,6 +112,7 @@ void setup() {
   DmxSimple.maxChannel(START_CHANNEL + RGB_GROUPS * 3 - 1);
   Serial.begin(SERIAL_BAUD);
   writeRgbToAllGroups(currentRgb);
+  Serial.println("READY");
 }
 
 void loop() {

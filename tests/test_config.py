@@ -87,3 +87,18 @@ def test_invalid_serial_baud_is_rejected(tmp_path):
 
     with pytest.raises(ConfigError):
         load_config(env_file, project_root=tmp_path)
+
+
+def test_control_panel_defaults_and_overrides(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("VIDEO_0=a.mp4\n", encoding="utf-8")
+    config = load_config(env_file, project_root=tmp_path)
+    assert (config.control_host, config.control_port) == ("127.0.0.1", 8080)
+
+    env_file.write_text("VIDEO_0=a.mp4\nCONTROL_HOST=0.0.0.0\nCONTROL_PORT=9000\n", encoding="utf-8")
+    config = load_config(env_file, project_root=tmp_path)
+    assert (config.control_host, config.control_port) == ("0.0.0.0", 9000)
+
+    env_file.write_text("VIDEO_0=a.mp4\nCONTROL_PORT=abc\n", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_config(env_file, project_root=tmp_path)
