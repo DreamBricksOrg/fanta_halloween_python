@@ -132,6 +132,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(200, (WEB_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif path == "/api/state":
             self._run(None)
+        elif path == "/api/logs":
+            self._send(200, {"days": self.app.telemetry.log_days()})
+        elif path == "/api/events":
+            day = parse_qs(urlparse(self.path).query).get("date", [""])[0]
+            self._send(200, {"date": day, "events": self.app.telemetry.day_events(day)})
         else:
             self._send(404, {"error": "not found"})
 

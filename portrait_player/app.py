@@ -23,7 +23,7 @@ def portrait_viewport_size(screen_width, screen_height):
 def main():
     try:
         config = load_config()
-        telemetry = Telemetry()
+        telemetry = Telemetry(log_dir=Path.cwd() / "logs")
         notifier = SerialNotifier.open(config.serial_port, config.serial_baud, telemetry)
     except (ConfigError, OSError, RuntimeError) as exc:
         root = tk.Tk()

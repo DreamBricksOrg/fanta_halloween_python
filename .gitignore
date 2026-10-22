@@ -12,3 +12,4 @@ env/
 
 playlist_state.json
 videos/*.part
+logs/

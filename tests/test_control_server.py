@@ -118,3 +118,18 @@ def test_cross_origin_writes_are_refused(server):
 def test_serves_control_page(server):
     with urlopen(server.url + "/") as res:
         assert b"Telemetria" in res.read()
+
+
+def test_events_persist_per_day_and_survive_restart(tmp_path):
+    from datetime import date
+
+    telemetry = Telemetry(log_dir=tmp_path)
+    telemetry.event("video", "#0 a.mp4 iniciou")
+    telemetry.event("serial_tx", "RGB(1,2,3)", ok=False)
+    today = date.today().isoformat()
+    assert telemetry.log_days() == [today]
+    assert [e["text"] for e in telemetry.day_events(today)] == ["#0 a.mp4 iniciou", "RGB(1,2,3)"]
+    assert telemetry.day_events("../secrets") == []
+
+    restarted = Telemetry(log_dir=tmp_path)
+    assert len(restarted.snapshot()["events"]) == 2
