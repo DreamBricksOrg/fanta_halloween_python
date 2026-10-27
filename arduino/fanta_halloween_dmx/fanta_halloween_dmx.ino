@@ -2,7 +2,10 @@
 #include <string.h>
 
 const uint8_t DMX_PIN = 13;
-const uint16_t START_CHANNEL = 2;
+const uint16_t TRIGGER_CHANNEL = 1;  // carries the "video (re)started" signal
+const uint8_t TRIGGER_VALUE = 1;
+const unsigned long TRIGGER_PULSE_MS = 200;
+const uint16_t START_CHANNEL = 2;  // first LED channel; the RGB groups follow it
 const uint8_t RGB_GROUPS = 10;
 const unsigned long FADE_DURATION_MS = 500;
 const uint32_t SERIAL_BAUD = 115200;
@@ -15,6 +18,8 @@ bool fading = false;
 char inputLine[32];
 uint8_t inputLength = 0;
 bool discardLine = false;
+unsigned long triggerStartedAt = 0;
+bool triggerActive = false;
 
 void writeRgbToAllGroups(const uint8_t rgb[3]) {
   for (uint8_t group = 0; group < RGB_GROUPS; ++group) {
@@ -60,8 +65,11 @@ bool parseInputLine() {
 
 void processInputLine() {
   if (inputLength == 0 && !discardLine) return;
-  // "1" = the video (re)started. Nothing to do yet besides acknowledging it.
+  // "1" = the video (re)started: pulse the trigger channel.
   if (!discardLine && inputLength == 1 && inputLine[0] == '1') {
+    DmxSimple.write(TRIGGER_CHANNEL, TRIGGER_VALUE);
+    triggerStartedAt = millis();
+    triggerActive = true;
     Serial.println("OK 1");
     return;
   }
@@ -90,6 +98,13 @@ void readSerialLines() {
         discardLine = true;
       }
     }
+  }
+}
+
+void updateTrigger() {
+  if (triggerActive && millis() - triggerStartedAt >= TRIGGER_PULSE_MS) {
+    DmxSimple.write(TRIGGER_CHANNEL, 0);
+    triggerActive = false;
   }
 }
 
@@ -122,5 +137,6 @@ void setup() {
 
 void loop() {
   readSerialLines();
+  updateTrigger();
   updateFade();
 }
