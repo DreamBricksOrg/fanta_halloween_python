@@ -160,7 +160,7 @@ class _Handler(BaseHTTPRequestHandler):
                 self._run(lambda: player.add(target))
                 return
             body = self._json_body()
-            match = re.fullmatch(r"/api/playlist/(\d+)(?:/(rgb))?", path)
+            match = re.fullmatch(r"/api/playlist/(\d+)(?:/(rgb|cues))?", path)
             if method == "POST" and path == "/api/next":
                 fn = player.next
             elif method == "POST" and path == "/api/previous":
@@ -178,6 +178,10 @@ class _Handler(BaseHTTPRequestHandler):
                 fn = lambda: player.move(body.get("from"), body.get("to"))
             elif method == "POST" and match and match.group(2) == "rgb":
                 fn = lambda: player.set_rgb(int(match.group(1)), body.get("rgb"))
+            elif method == "POST" and match and match.group(2) == "cues":
+                fn = lambda: player.set_cues(int(match.group(1)), body.get("cues"))
+            elif method == "POST" and path == "/api/seek":
+                fn = lambda: player.seek(body.get("seconds"))
             elif method == "DELETE" and match and not match.group(2):
                 fn = lambda: player.remove(int(match.group(1)))
             elif method == "POST" and path == "/api/led":

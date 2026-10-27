@@ -75,7 +75,7 @@ def test_state_includes_playlist_and_telemetry(server):
     assert [v["name"] for v in data["playlist"]] == ["a.mp4", "b.mp4"]
     assert data["telemetry"]["uptime_s"] >= 0
     assert data["serial"]["connected"] is True
-    assert data["telemetry"]["counters"]["serial_tx"] == 1  # the first video start was logged
+    assert data["telemetry"]["counters"]["serial_tx"] == 2  # the first video start: "1" + its color
 
 
 def test_led_mode_sends_rgb_over_serial(server):
@@ -133,3 +133,14 @@ def test_events_persist_per_day_and_survive_restart(tmp_path):
 
     restarted = Telemetry(log_dir=tmp_path)
     assert len(restarted.snapshot()["events"]) == 2
+
+
+def test_cues_and_seek_endpoints(server):
+    cues = [{"t": 5, "rgb": [1, 2, 3]}, {"t": 0, "rgb": [9, 9, 9]}]
+    status, data = call(server, "POST", "/api/playlist/0/cues", {"cues": cues})
+    assert status == 200
+    assert [c["t"] for c in data["playlist"][0]["cues"]] == [0, 5]
+    status, data = call(server, "POST", "/api/playlist/0/cues", {"cues": [{"t": 1, "rgb": [1, 2, 3]}] * 2})
+    assert status == 400
+    status, data = call(server, "POST", "/api/seek", {"seconds": -3})
+    assert status == 400

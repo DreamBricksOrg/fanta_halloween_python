@@ -50,7 +50,7 @@ def main():
         raise SystemExit(1)
     state_path = Path.cwd() / STATE_FILE
     saved = load_state(state_path)
-    videos, rgbs = saved if saved else (config.videos, config.video_rgbs)
+    videos, rgbs, cues = saved if saved else (config.videos, config.video_rgbs, config.video_cues)
     player = PlaylistPlayer(
         videos,
         backend,
@@ -58,6 +58,8 @@ def main():
         rgbs,
         on_event=telemetry.event,
         on_change=lambda: save_state(state_path, player),
+        video_cues=cues,
+        cue_lead_ms=config.cue_lead_ms,
     )
     main_thread = MainThread()
     server = None
@@ -111,7 +113,8 @@ def main():
     def poll_vlc_events():
         backend.process_events()
         main_thread.drain()
-        root.after(30, poll_vlc_events)
+        player.tick()
+        root.after(20, poll_vlc_events)
 
     def poll_serial():
         if notifier.poll() and notifier.last_rgb is not None:
@@ -121,7 +124,7 @@ def main():
 
     root.after(500, poll_serial)
 
-    root.after(30, poll_vlc_events)
+    root.after(20, poll_vlc_events)
     root.after(150, player.start)
 
     def shutdown():

@@ -60,6 +60,11 @@ bool parseInputLine() {
 
 void processInputLine() {
   if (inputLength == 0 && !discardLine) return;
+  // "1" = the video (re)started. Nothing to do yet besides acknowledging it.
+  if (!discardLine && inputLength == 1 && inputLine[0] == '1') {
+    Serial.println("OK 1");
+    return;
+  }
   // Acknowledge every line so the host can tell the command arrived intact.
   if (!discardLine && parseInputLine()) {
     Serial.print("OK ");

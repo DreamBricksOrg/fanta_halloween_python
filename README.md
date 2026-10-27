@@ -28,6 +28,8 @@ Playlist entries use `VIDEO_N` keys, ordered numerically (not by textual sorting
 | Variable | Meaning | Default |
 | --- | --- | --- |
 | `VIDEO_0`, `VIDEO_1`, … | Video paths in playlist order | Required |
+| `VIDEO_0_CLIPS` | Easiest way to describe a video made of consecutive clips: `seconds:r,g,b` per clip, separated by `;` (e.g. `60:255,96,0;60:190,0,120`). Each clip's start is the sum of the previous lengths, so changing one length shifts the rest. Do not combine with `VIDEO_0_CUES` | None |
+| `VIDEO_0_CUES` | Timeline cues for the video, `seconds:r,g,b` separated by `;` (e.g. `0:255,96,0;60:190,0,120`). The LEDs switch to each color at its time | None (one color for the whole video) |
 | `VIDEO_0_RGB` | RGB channels for the first video, comma-separated | `255,96,0` |
 | `VIDEO_1_RGB` | RGB channels for the second video, comma-separated | `190,0,120` |
 | `VIDEO_2_RGB` | RGB channels for the third video, comma-separated | `72,0,255` |
@@ -55,6 +57,8 @@ The app launches fullscreen. Video is displayed in a centered 9:16 portrait view
 Starting the app also starts a web panel at <http://127.0.0.1:8080> (`CONTROL_HOST` / `CONTROL_PORT` in `.env`; `CONTROL_PORT=0` disables it; use `CONTROL_HOST=0.0.0.0` to reach it from a phone on the same network — there is no login, so only do this on a trusted network).
 
 - **Playlist**: add videos (upload from the browser into `videos/`, or a path already on the PC), remove them (the file is not deleted), reorder by dragging or with the arrows, play any video now, and set each video's LED color. Changes apply immediately and are saved to `playlist_state.json`, which takes precedence over `VIDEO_N` in `.env` once it exists (delete it to go back to `.env`). Reordering never restarts the playing video; removing the playing one starts the next.
+- **Timeline cues (one long video, many colors)**: each video can have a list of cues, `time → RGB`. The ⏱ button on a video opens its editor; the bar above the playlist shows the colors along the video, the playhead, and lets you click to seek. Workflow: pause, click the bar (or ⤴ on a cue) to find the exact frame, then **+ cue agora** (it uses the current position, 0.1 s resolution) and pick the color. The app checks the VLC clock every 20 ms and sends `RGB(r,g,b)` the moment a cue's time is reached, once per pass; seeking or looping re-sends the color for the new position. Before the first cue (or when a video has no cues) the video's base color is used, so old playlists work unchanged. Cues are saved in `playlist_state.json`.
+- **Restart signal**: every time a video starts (including each loop of a single video), the app first writes `1` + newline to the serial port and then the `RGB(r,g,b)` command. The sketch acknowledges it with `OK 1`.
 - **LED mode**: pauses the video and sends the RGB you pick (sliders, picker, presets) straight to the LEDs. Leaving it resumes the video and restores its color.
 - **Telemetry**: app uptime, serial port state (reconnects automatically if unplugged), the last message sent, whether the Arduino confirmed it, what is playing, counters and an event log (video started → `RGB(...)` sent → Arduino `OK`). Every event is also appended to `logs/events-YYYY-MM-DD.jsonl` (one file per day, kept across restarts); pick a day in the log's selector to see or download the whole day. Old files are never deleted automatically.
 

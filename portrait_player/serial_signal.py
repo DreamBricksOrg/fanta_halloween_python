@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 RECONNECT_INTERVAL_S = 3.0
+RESTART_MESSAGE = "1"
 
 
 def _check_rgb(rgb) -> None:
@@ -78,8 +79,10 @@ class SerialNotifier:
     def send_rgb(self, rgb, source: str = "") -> bool:
         """Write one RGB command; returns whether it reached the serial port."""
         _check_rgb(rgb)
-        message = f"RGB({rgb[0]},{rgb[1]},{rgb[2]})"
         self.last_rgb = tuple(rgb)
+        return self._send(f"RGB({rgb[0]},{rgb[1]},{rgb[2]})", source)
+
+    def _send(self, message: str, source: str = "") -> bool:
         if not self.connected:
             if self._port:
                 self._log("serial_tx", f"{message} não enviado (porta desconectada)", ok=False)
@@ -99,6 +102,8 @@ class SerialNotifier:
         if index < 0:
             raise ValueError("playlist index cannot be negative")
         _check_rgb(rgb)
+        # "1" tells the Arduino the video (re)started; the color follows right after.
+        self._send(RESTART_MESSAGE, f"vídeo {index} reiniciou")
         self.send_rgb(rgb, f"vídeo {index}")
 
     def poll(self) -> bool:

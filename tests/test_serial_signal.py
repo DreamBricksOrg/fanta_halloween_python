@@ -17,10 +17,20 @@ def test_notifies_arduino_with_exact_rgb_ascii_and_newline():
     serial = FakeSerial()
     notifier = SerialNotifier(serial)
 
-    notifier.playback_started(0, (255, 96, 0))
-    notifier.playback_started(1, (190, 0, 120))
+    notifier.send_rgb((255, 96, 0))
+    notifier.send_rgb((190, 0, 120))
 
     assert serial.writes == [b"RGB(255,96,0)\n", b"RGB(190,0,120)\n"]
+
+
+def test_each_playback_start_sends_restart_1_then_the_color():
+    serial = FakeSerial()
+    notifier = SerialNotifier(serial)
+
+    notifier.playback_started(0, (255, 96, 0))
+    notifier.playback_started(0, (255, 96, 0))  # the video looped
+
+    assert serial.writes == [b"1\n", b"RGB(255,96,0)\n"] * 2
 
 
 def test_playback_event_sends_rgb_once_for_each_start():
@@ -41,7 +51,7 @@ def test_playback_event_sends_rgb_once_for_each_start():
     player = PlaylistPlayer(("one", "two"), Backend(), SerialNotifier(serial))
     player.start()
     player.next()
-    assert serial.writes == [b"RGB(255,96,0)\n", b"RGB(190,0,120)\n"]
+    assert serial.writes == [b"1\n", b"RGB(255,96,0)\n", b"1\n", b"RGB(190,0,120)\n"]
 
 
 def test_disabled_notifier_does_not_require_hardware():

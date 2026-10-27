@@ -89,6 +89,29 @@ def test_invalid_serial_baud_is_rejected(tmp_path):
         load_config(env_file, project_root=tmp_path)
 
 
+def test_video_cues_are_read_from_env_and_default_to_none(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("VIDEO_0=a.mp4\nVIDEO_0_CUES=60:190,0,120; 0:255,96,0\nVIDEO_1=b.mp4\n", encoding="utf-8")
+    config = load_config(env_file, project_root=tmp_path)
+    assert config.video_cues == (((0, (255, 96, 0)), (60000, (190, 0, 120))), ())
+
+    env_file.write_text("VIDEO_0=a.mp4\nVIDEO_0_CUES=60:190,0\n", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_config(env_file, project_root=tmp_path)
+
+
+def test_clips_give_cue_times_as_running_total_of_lengths(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("VIDEO_0=a.mp4\nVIDEO_0_CLIPS=60:255,96,0; 45.5:190,0,120;30:1,2,3\n", encoding="utf-8")
+    config = load_config(env_file, project_root=tmp_path)
+    assert config.video_cues[0] == ((0, (255, 96, 0)), (60000, (190, 0, 120)), (105500, (1, 2, 3)))
+
+    for bad in ("VIDEO_0_CLIPS=0:1,2,3", "VIDEO_0_CLIPS=abc:1,2,3", "VIDEO_0_CLIPS=60:1,2,3\nVIDEO_0_CUES=0:1,2,3"):
+        env_file.write_text("VIDEO_0=a.mp4\n" + bad + "\n", encoding="utf-8")
+        with pytest.raises(ConfigError):
+            load_config(env_file, project_root=tmp_path)
+
+
 def test_control_panel_defaults_and_overrides(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("VIDEO_0=a.mp4\n", encoding="utf-8")
