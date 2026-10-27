@@ -162,9 +162,9 @@ class _Handler(BaseHTTPRequestHandler):
             body = self._json_body()
             match = re.fullmatch(r"/api/playlist/(\d+)(?:/(rgb|cues))?", path)
             if method == "POST" and path == "/api/next":
-                fn = player.next
+                fn = player.next_clip
             elif method == "POST" and path == "/api/previous":
-                fn = player.previous
+                fn = player.previous_clip
             elif method == "POST" and path == "/api/pause":
                 fn = player.pause_resume
             elif method == "POST" and path == "/api/play":

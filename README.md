@@ -50,7 +50,7 @@ Set `SERIAL_PORT` to the Arduino's port in `.env` to enable serial output. The b
 python -m portrait_player
 ```
 
-The app launches fullscreen. Video is displayed in a centered 9:16 portrait viewport, with black bars on landscape screens to preserve the image's aspect ratio. The playlist advances automatically and loops continuously, including when it contains only one video. No controls or command hints are shown by default. Press **D** to show or hide the debug footer and its Previous, Pause / Resume, and Next buttons. Keyboard shortcuts remain available: **D** = toggle debug footer, **Left** = previous, **Right** = next, **Space** = pause/resume, and **Escape** = quit.
+The app launches fullscreen. Video is displayed in a centered 9:16 portrait viewport, with black bars on landscape screens to preserve the image's aspect ratio. The playlist advances automatically and loops continuously, including when it contains only one video. No controls or command hints are shown by default. Press **D** to show or hide the debug footer and its Previous, Pause / Resume, and Next buttons. Keyboard shortcuts remain available: **D** = toggle debug footer, **Left** = previous clip (restarts the current clip if it is more than 2 s in), **Right** = next clip (the next video after the last clip), **Space** = pause/resume, and **Escape** = quit.
 
 ## Control panel
 

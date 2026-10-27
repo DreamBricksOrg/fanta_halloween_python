@@ -135,3 +135,34 @@ def test_cues_survive_save_and_load(tmp_path):
     save_state(path, player)
     videos, rgbs, cues = load_state(path)
     assert cues[0] == parse_cues(CUES)
+
+
+def test_next_and_previous_clip_jump_between_cues_and_resend_color():
+    player, backend, notifier = make()
+    player.next_clip()
+    assert backend.seeks == [10000]
+    player.tick()
+    assert notifier.sent[-1] == (0, 255, 0)
+    player.next_clip()
+    assert backend.seeks[-1] == 20500
+    backend.time = 20600  # just entered the last clip: previous goes to the one before it
+    player.previous_clip()
+    assert backend.seeks[-1] == 10000
+    backend.time = 15000  # well into the clip: previous restarts it
+    player.previous_clip()
+    assert backend.seeks[-1] == 10000
+
+
+def test_next_clip_after_the_last_cue_goes_to_the_next_video_and_previous_before_first_goes_back():
+    backend, notifier = Backend(), Notifier()
+    player = PlaylistPlayer([Path("a.mp4"), Path("b.mp4")], backend, notifier, [(1, 1, 1)] * 2,
+                            video_cues=[parse_cues(CUES), []])
+    player.start()
+    backend.time = 25000
+    player.next_clip()
+    assert player.index == 1  # no cue ahead
+    player.next_clip()  # b has no cues: next video (wraps to a)
+    assert player.index == 0
+    backend.time = 500  # inside the first clip, barely started
+    player.previous_clip()
+    assert player.index == 1

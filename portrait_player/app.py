@@ -82,7 +82,7 @@ def main():
         anchor="center",
     ).pack(fill="x", padx=8, pady=8)
     controls = tk.Frame(footer, bg="#111111")
-    for label, action in (("Previous", player.previous), ("Pause / Resume", player.pause_resume), ("Next", player.next)):
+    for label, action in (("Previous", player.previous_clip), ("Pause / Resume", player.pause_resume), ("Next", player.next_clip)):
         tk.Button(controls, text=label, command=action).pack(side="left", expand=True, fill="x")
     controls.pack(fill="x", padx=8, pady=(0, 8))
     debug_visible = False
@@ -104,8 +104,8 @@ def main():
 
     root.bind_all("<d>", toggle_debug)
     root.bind_all("<D>", toggle_debug)
-    root.bind_all("<Left>", lambda event: (player.previous(), "break")[1])
-    root.bind_all("<Right>", lambda event: (player.next(), "break")[1])
+    root.bind_all("<Left>", lambda event: (player.previous_clip(), "break")[1])
+    root.bind_all("<Right>", lambda event: (player.next_clip(), "break")[1])
     root.bind_all("<space>", lambda event: (player.pause_resume(), "break")[1])
     root.bind_all("<Escape>", lambda event: (shutdown(), "break")[1])
     root.focus_force()

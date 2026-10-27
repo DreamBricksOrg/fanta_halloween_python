@@ -4,6 +4,7 @@ from bisect import bisect_right
 from pathlib import Path
 
 DEFAULT_RGBS = ((255, 96, 0), (190, 0, 120), (72, 0, 255))
+RESTART_CLIP_AFTER_MS = 2000  # "previous" restarts the clip when this far into it
 
 
 def _noop(*args, **kwargs):
@@ -95,6 +96,33 @@ class PlaylistPlayer:
     def previous(self):
         self.index = (self.index - 1) % len(self.videos)
         self._play_current()
+
+    def next_clip(self):
+        """Jump to the next cue of the video; after the last cue (or without cues) go to the next video."""
+        pos = self._position_ms()
+        for t, _ in self.video_cues[self.index]:
+            if t > pos:
+                self.on_event("cue", f"pulou para o clip em {t / 1000:.2f}s")
+                self.backend.set_time(t)
+                self._active_cue = None
+                return
+        self.next()
+
+    def previous_clip(self):
+        """Restart the current clip, or go to the one before it if it just began."""
+        pos = self._position_ms()
+        starts = [t for t, _ in self.video_cues[self.index]]
+        slot = bisect_right(starts, pos) - 1
+        if slot >= 0 and pos - starts[slot] > RESTART_CLIP_AFTER_MS:
+            target = starts[slot]
+        elif slot >= 1:
+            target = starts[slot - 1]
+        else:
+            self.previous()
+            return
+        self.on_event("cue", f"voltou para o clip em {target / 1000:.2f}s")
+        self.backend.set_time(target)
+        self._active_cue = None
 
     def play_index(self, index):
         self._check_index(index)
