@@ -2,7 +2,7 @@
 #include <string.h>
 
 const uint8_t DMX_PIN = 13;
-const uint16_t START_CHANNEL = 1;
+const uint16_t START_CHANNEL = 2;
 const uint8_t RGB_GROUPS = 10;
 const unsigned long FADE_DURATION_MS = 500;
 const uint32_t SERIAL_BAUD = 115200;

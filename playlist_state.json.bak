@@ -1,0 +1,36 @@
+{
+  "videos": [
+    {
+      "path": "C:\\Users\\db\\Documents\\db\\prj\\fanta_halloween\\videos\\FANTA HALLOWEEN_LARANJA_1080 x 1920_1_.mp4",
+      "rgb": [
+        255,
+        96,
+        0
+      ]
+    },
+    {
+      "path": "C:\\Users\\db\\Documents\\db\\prj\\fanta_halloween\\videos\\FANTA HALLOWEEN_UVA_1080 x 1920_1_.mp4",
+      "rgb": [
+        72,
+        0,
+        255
+      ]
+    },
+    {
+      "path": "C:\\Users\\db\\Documents\\db\\prj\\fanta_halloween\\videos\\FANTA HALLOWEEN_LARANJA_1080 x 1920_1_-1.mp4",
+      "rgb": [
+        255,
+        96,
+        0
+      ]
+    },
+    {
+      "path": "C:\\Users\\db\\Documents\\db\\prj\\fanta_halloween\\videos\\FANTA HALLOWEEN_SP_ESPECIAL_1080 x 1920_1_.mp4",
+      "rgb": [
+        190,
+        0,
+        120
+      ]
+    }
+  ]
+}
